@@ -6,7 +6,7 @@ const router = Router();
 const sellerController = new SellerController();
 
 router.post('/', authMiddleware, sellerController.createSeller);
-router.get('/', authMiddleware, sellerController.getSellers);
+router.get('/', authMiddleware, sellerController.getAllSellers);
 router.get('/:id', authMiddleware, sellerController.getSellerById);
 router.put('/:id', authMiddleware, validateSeller, sellerController.updateSeller);
 router.delete('/:id', authMiddleware, sellerController.deleteSeller);
