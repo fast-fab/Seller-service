@@ -110,6 +110,86 @@ export class SellerController {
     }
   }
 
+  async addProduct(req, res) {
+    try {
+      const { id } = req.params;
+      
+      const seller = await prisma.seller.findUnique({
+        where: { id }
+      });
+
+      if (!seller) {
+        return res.status(404).json({ error: 'Seller not found' });
+      }
+
+      const product = await prisma.product.create({
+        data: {
+          ...req.body,
+          sellerId: id,
+          images: Array.isArray(req.body.images) ? req.body.images : []
+        }
+      });
+
+      res.status(201).json(product);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async updateProduct(req, res) {
+    try {
+      const { id, productId } = req.params;
+
+      // const existingProduct = await prisma.product.findFirst({
+      //   where: {
+      //     id: productId,
+      //     sellerId: id
+      //   }
+      // });
+
+      // if (!existingProduct) {
+      //   return res.status(404).json({ error: 'Product not found or does not belong to this seller' });
+      // }
+
+      const product = await prisma.product.update({
+        where: { id: productId },
+        data: {
+          ...req.body,
+          images: Array.isArray(req.body.images) ? req.body.images : undefined
+        }
+      });
+
+      res.status(200).json(product);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async deleteProduct(req, res) {
+    try {
+      const { id, productId } = req.params;
+
+      const existingProduct = await prisma.product.findFirst({
+        where: {
+          id: productId,
+          sellerId: id
+        }
+      });
+
+      if (!existingProduct) {
+        return res.status(404).json({ error: 'Product not found or does not belong to this seller' });
+      }
+
+      await prisma.product.delete({
+        where: { id: productId }
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   async verifySeller(req, res) {
     try {
       const { id } = req.params;

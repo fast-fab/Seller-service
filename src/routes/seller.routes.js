@@ -15,4 +15,7 @@ router.post('/:id/products', authMiddleware, validateProduct, sellerController.a
 router.put('/:id/products/:productId', authMiddleware, validateProduct, sellerController.updateProduct);
 router.delete('/:id/products/:productId', authMiddleware, sellerController.deleteProduct);
 
+router.patch('/:id/verify', authMiddleware, sellerController.verifySeller);
+router.patch('/:id/status', authMiddleware, sellerController.updateSellerStatus);
+
 export default router;
