@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
-import { AuthError } from '../../utils/errors';
+import { AuthError } from '../utils/errors.js';
 
 const prisma = new PrismaClient();
 

@@ -34,7 +34,12 @@ model Seller {
   closeTime   String
   products    Product[]
   refreshTokens RefreshToken[]
+  notifications Notification[]
   password    String
+  latitude    Float?
+  longitude   Float?
+  fcmToken    String?
+  responses   OrderResponse[]
 }
 
 model Product {
@@ -58,4 +63,28 @@ model RefreshToken {
   seller    Seller   @relation(fields: [sellerId], references: [id])
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  sellerId  String
+  seller    Seller   @relation(fields: [sellerId], references: [id])
+  title     String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  metadata  Json?
+}
+
+model OrderResponse {
+  id           String   @id @default(uuid())
+  orderId      String
+  sellerId     String
+  seller       Seller   @relation(fields: [sellerId], references: [id])
+  response     Boolean
+  responseTime DateTime
+  createdAt    DateTime @default(now())
+
+  @@unique([orderId, sellerId])
 }

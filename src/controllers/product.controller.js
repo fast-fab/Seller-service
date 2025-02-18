@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
+import { KafkaProducer } from '../kafka/producers/OrderNotification.producer.js';
 
 const prisma = new PrismaClient();
+const kafkaProducer = new KafkaProducer();
 
 export class ProductController {
   async getSellerProducts(req, res) {
@@ -59,6 +61,15 @@ export class ProductController {
           sellerId
         },
         data: { stock }
+      });
+
+      // Notify about stock update
+      await kafkaProducer.sendOrderStatusUpdate(productId, {
+        type: 'PRODUCT_STOCK_UPDATE',
+        productId,
+        sellerId,
+        newStock: stock,
+        timestamp: new Date().toISOString()
       });
 
       res.status(200).json(product);

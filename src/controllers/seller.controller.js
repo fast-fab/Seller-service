@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import { KafkaProducer } from '../kafka/producers/OrderNotification.producer.js';
+import bcrypt from 'bcryptjs';
+
 const prisma = new PrismaClient();
+const kafkaProducer = new KafkaProducer();
 
 export class SellerController {
   async createSeller(req, res) {
@@ -7,6 +11,7 @@ export class SellerController {
       const seller = await prisma.seller.create({
         data: {
           ...req.body,
+          password: await bcrypt.hash(req.body.password, 10),
           categories: Array.isArray(req.body.categories) ? req.body.categories : []
         }
       });
@@ -148,7 +153,7 @@ export class SellerController {
       // });
 
       // if (!existingProduct) {
-      //   return res.status(404).json({ error: 'Product not found or does not belong to this seller' });
+      //   return res.status(404).json({ error: 'Product not found' });
       // }
 
       const product = await prisma.product.update({
@@ -158,6 +163,15 @@ export class SellerController {
           images: Array.isArray(req.body.images) ? req.body.images : undefined
         }
       });
+      if (req.body.stock !== undefined) {
+        await kafkaProducer.sendOrderStatusUpdate(productId, {
+          type: 'PRODUCT_STOCK_UPDATE',
+          productId,
+          sellerId: id,
+          newStock: req.body.stock,
+          timestamp: new Date().toISOString()
+        });
+      }
 
       res.status(200).json(product);
     } catch (error) {
@@ -221,11 +235,53 @@ export class SellerController {
         data: { isActive }
       });
 
+      // Notify about seller status change
+      await kafkaProducer.sendOrderStatusUpdate(id, {
+        type: 'SELLER_STATUS_UPDATE',
+        sellerId: id,
+        isActive,
+        timestamp: new Date().toISOString()
+      });
+
       res.status(200).json(seller);
     } catch (error) {
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'Seller not found' });
       }
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async respondToOrder(req, res) {
+    try {
+      const { id: sellerId } = req.params;
+      const { orderId, accepted, reason } = req.body;
+
+      if (typeof accepted !== 'boolean') {
+        return res.status(400).json({ error: 'accepted must be a boolean' });
+      }
+
+      // Record the response
+      const response = await prisma.orderResponse.create({
+        data: {
+          orderId,
+          sellerId,
+          response: accepted,
+          responseTime: new Date()
+        }
+      });
+
+      // Send response to Kafka
+      await kafkaProducer.sendSellerResponse({
+        orderId,
+        sellerId,
+        accepted,
+        reason,
+        timestamp: new Date().toISOString()
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
       res.status(500).json({ error: error.message });
     }
   }
